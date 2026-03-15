@@ -10,12 +10,13 @@ Uma calculadora web moderna, expansível e responsiva construída puramente com 
 
 Abaixo estão as visualizações dos dois modos de operação da calculadora:
 
-### Modo Standard
+### Modo Standard (Padrão)
+<img width="1920" height="997" alt="Image" src="https://github.com/user-attachments/assets/c157098f-fcd1-4040-94bc-6909d731ca10" />
 
-### Modo Scientific
+### Modo Scientific (Científico)
+<img width="1920" height="997" alt="Image" src="https://github.com/user-attachments/assets/ea46981a-684b-4797-8a0b-77f476ea5c4c" />
 
-
-## Funcionalidades (Features)
+## Funcionalidades
 
 * Dual-Mode UI: Alternância fluida e animada entre o modo Standard (básico) e o modo Scientific (avançado).
 * Design Premium: Paleta de cores Lemon Yellow & Charcoal (Amarelo Limão e Carvão), tipografia monoespaçada e sombras dramáticas para profundidade.
@@ -26,7 +27,7 @@ Abaixo estão as visualizações dos dois modos de operação da calculadora:
   * Deleção inteligente (apaga funções como log( inteiras num só clique).
 * Ripple Effect: Animação de clique baseada em coordenadas exatas do mouse, construída do zero com CSS e JS puros, sem bibliotecas externas.
 
-## Arquitetura e Código Limpo (Clean Code)
+## Arquitetura e Código Limpo
 
 Este projeto foi reestruturado para demonstrar boas práticas de Engenharia de Software:
 * Orientação a Objetos (OOP): Toda a lógica matemática e de estado foi encapsulada numa classe Calculator, separando o "Cérebro" da "Interface" (DOM).
