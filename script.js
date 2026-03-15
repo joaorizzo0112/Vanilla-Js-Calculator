@@ -1,71 +1,204 @@
-const historyEl = document.getElementById('history');
-const resultEl = document.getElementById('result');
-const pad = document.querySelector('.pad');
-const copyBtn = document.getElementById('copyBtn');
-const backspaceBtn = document.getElementById('backspaceBtn');
-const themeSwitch = document.getElementById('theme-switch');
-
-let current = '';
-let lastExpr = '';
-let justEvaluated = false;
-
-function render() {
-  historyEl.textContent = lastExpr;
-  resultEl.textContent = current || '0';
-}
-
-function clearAll() { current = ''; lastExpr = ''; render(); }
-function backspace() { current = current.slice(0, -1); render(); }
-function toggleSign() {
-  if (!current) return;
-  current = current.startsWith('−') ? current.slice(1) : '−' + current;
-  render();
-}
-function appendValue(val) {
-  if (justEvaluated && /[0-9.]/.test(val)) {
-    current = val; justEvaluated = false;
-  } else {
-    if (/[\u00D7\u00F7\u2212+%]$/.test(current) && /[\u00D7\u00F7\u2212+%]/.test(val)) {
-      current = current.slice(0, -1);
+class Calculator {
+    constructor(resultEl, historyEl) {
+        this.resultEl = resultEl;
+        this.historyEl = historyEl;
+        this.currentInput = '';
+        this.lastResult = '';
+        this.justEvaluated = false;
     }
-    current += val;
-  }
-  render();
+
+    updateDisplay() {
+        this.resultEl.textContent = this.currentInput || '0';
+        this.historyEl.textContent = this.lastResult;
+
+        if (this.currentInput.length > 10) {
+            this.resultEl.style.fontSize = '2.5rem';
+        } else {
+            this.resultEl.style.fontSize = '5rem';
+        }
+    }
+
+    clear() {
+        this.currentInput = '';
+        this.lastResult = '';
+        this.updateDisplay();
+    }
+
+    deleteLast() {
+        if (!this.currentInput) return;
+        
+        const scientificFuncs = ['sin(', 'cos(', 'tan(', 'log(', 'ln(', '√('];
+        let foundFunc = false;
+        
+        for (let func of scientificFuncs) {
+            if (this.currentInput.endsWith(func)) {
+                this.currentInput = this.currentInput.slice(0, -func.length);
+                foundFunc = true;
+                break;
+            }
+        }
+        
+        if (!foundFunc) {
+            this.currentInput = this.currentInput.slice(0, -1);
+        }
+        this.updateDisplay();
+    }
+
+    handleInput(val) {
+        const operators = ['+', '−', '×', '÷', '^'];
+        const isOperator = operators.includes(val);
+        const lastChar = this.currentInput.slice(-1);
+        const isLastCharOperator = operators.includes(lastChar);
+
+        if (this.currentInput === '' && isOperator && val !== '−') return;
+
+        if (isOperator && isLastCharOperator) {
+            this.currentInput = this.currentInput.slice(0, -1) + val;
+        } else {
+            if (this.justEvaluated) {
+                if (isOperator) {
+                    this.currentInput += val; 
+                } else {
+                    this.currentInput = val; 
+                }
+            } else {
+                this.currentInput += val;
+            }
+        }
+        
+        this.justEvaluated = false;
+        this.updateDisplay();
+    }
+
+    compute() {
+        if (!this.currentInput) return;
+
+        try {
+            let expression = this.currentInput;
+
+            expression = expression.replace(/(\d+(?:\.\d+)?)(\+|−)(\d+(?:\.\d+)?)%/g, '$1$2($1*$3/100)');
+            expression = expression
+                .replace(/÷/g, '/')
+                .replace(/×/g, '*')
+                .replace(/−/g, '-')
+                .replace(/π/g, 'Math.PI')
+                .replace(/e/g, 'Math.E')
+                .replace(/\^/g, '**')
+                .replace(/√\(/g, 'Math.sqrt(')
+                .replace(/%/g, '/100')
+                .replace(/log\(/g, 'Math.log10(')
+                .replace(/ln\(/g, 'Math.log(');
+
+            expression = expression.replace(/(sin|cos|tan)\(([^)]+)\)/g, (match, func, val) => {
+                return `Math.${func}((${val}) * Math.PI / 180)`;
+            });
+
+            const openParens = (expression.match(/\(/g) || []).length;
+            const closeParens = (expression.match(/\)/g) || []).length;
+            for (let i = 0; i < openParens - closeParens; i++) {
+                expression += ')';
+            }
+
+            const rawResult = eval(expression);
+
+            const formattedResult = Number.isInteger(rawResult) 
+                ? rawResult.toString() 
+                : parseFloat(rawResult.toFixed(10)).toString();
+
+            this.lastResult = this.currentInput + ' =';
+            this.currentInput = formattedResult;
+            this.justEvaluated = true;
+
+        } catch (error) {
+            const prevInput = this.currentInput;
+            this.currentInput = 'Erro';
+            this.updateDisplay();
+            setTimeout(() => { 
+                this.currentInput = prevInput; 
+                this.updateDisplay(); 
+            }, 1500);
+            return;
+        }
+        this.updateDisplay();
+    }
 }
-function calculate() {
-  try {
-    let expr = current.replace(/÷/g,'/').replace(/×/g,'*').replace(/\u2212/g,'-').replace(/%/g,'/100');
-    if (/[+\-*/]$/.test(expr)) expr = expr.slice(0,-1);
-    let res = eval(expr);
-    lastExpr = current;
-    current = res.toString().startsWith('-') ? '−' + res.toString().slice(1) : res.toString();
-    justEvaluated = true;
-    render();
-  } catch {
-    current = 'Erro'; render();
-  }
+
+const resultEl = document.getElementById('result');
+const historyEl = document.getElementById('history');
+const sciSwitch = document.getElementById('scientific-switch');
+const pad = document.querySelector('.pad');
+
+const calc = new Calculator(resultEl, historyEl);
+
+sciSwitch.addEventListener('change', () => {
+    document.body.classList.toggle('scientific-mode', sciSwitch.checked);
+});
+
+function triggerVisualFeedback(type, value) {
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(btn => {
+        if (btn.dataset[type] === value) {
+            btn.classList.add('active-visual');
+            setTimeout(() => btn.classList.remove('active-visual'), 150);
+        }
+    });
 }
 
 pad.addEventListener('click', (e) => {
-  const btn = e.target.closest('button.btn');
-  if (!btn) return;
-  if (btn.dataset.action === 'clear') return clearAll();
-  if (btn.dataset.action === 'toggleSign') return toggleSign();
-  if (btn.dataset.action === 'equals') return calculate();
-  if (btn.dataset.value) return appendValue(btn.dataset.value);
+    const btn = e.target.closest('button');
+    if (!btn) return;
+
+    const circle = document.createElement('span');
+    const diameter = Math.max(btn.clientWidth, btn.clientHeight);
+    const radius = diameter / 2;
+    const rect = btn.getBoundingClientRect();
+    
+    circle.style.width = circle.style.height = `${diameter}px`;
+    circle.style.left = `${e.clientX - rect.left - radius}px`;
+    circle.style.top = `${e.clientY - rect.top - radius}px`;
+    circle.classList.add('ripple');
+    
+    const oldRipple = btn.querySelector('.ripple');
+    if (oldRipple) oldRipple.remove();
+    btn.appendChild(circle);
+
+    const val = btn.dataset.value;
+    const action = btn.dataset.action;
+
+    if (action === 'clear') calc.clear();
+    else if (action === 'backspace') calc.deleteLast();
+    else if (action === 'equals') calc.compute();
+    else if (val) calc.handleInput(val);
 });
-copyBtn.addEventListener('click', () => {
-  navigator.clipboard.writeText(resultEl.textContent.replace('−','-'));
-});
-backspaceBtn.addEventListener('click', backspace);
-themeSwitch.addEventListener('change', () => {
-  document.body.classList.toggle('dark', themeSwitch.checked);
-});
+
 window.addEventListener('keydown', (e) => {
-  if (/\d/.test(e.key)) appendValue(e.key);
-  else if (['+','-','*','/','%'].includes(e.key)) {
-    appendValue(e.key==='-'?'−':e.key==='*'?'×':e.key==='/'?'÷':e.key);
-  } else if (e.key==='Enter') calculate();
-  else if (e.key==='Backspace') backspace();
+    const key = e.key;
+    const keyMap = { '+': '+', '-': '−', '*': '×', '/': '÷', '^': '^' };
+
+    if (key === 'Enter' || key === '=' || key === 'Backspace' || key === 'Escape') {
+        e.preventDefault(); 
+    }
+
+    if (/\d/.test(key) || key === '(' || key === ')' || key === '.' || key === '%') {
+        calc.handleInput(key);
+        triggerVisualFeedback('value', key);
+    } 
+    else if (keyMap[key]) {
+        calc.handleInput(keyMap[key]);
+        triggerVisualFeedback('value', keyMap[key]);
+    } 
+    else if (key === 'Enter' || key === '=') {
+        calc.compute();
+        triggerVisualFeedback('action', 'equals');
+    } 
+    else if (key === 'Backspace') {
+        calc.deleteLast();
+        triggerVisualFeedback('action', 'backspace');
+    } 
+    else if (key === 'Escape' || key.toLowerCase() === 'c') {
+        calc.clear();
+        triggerVisualFeedback('action', 'clear');
+    }
 });
-render();
+
+calc.updateDisplay();
