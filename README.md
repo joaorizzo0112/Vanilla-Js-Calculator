@@ -11,8 +11,6 @@ Uma calculadora web moderna, expansível e responsiva construída puramente com 
 Abaixo estão as visualizações dos dois modos de operação da calculadora:
 
 ### Modo Standard
-> Cole aqui a imagem da calculadora no modo normal
-![Modo Standard](./standard.png)
 
 ### Modo Scientific
 
